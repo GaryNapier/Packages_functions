@@ -93,6 +93,7 @@
 # install.packages("DMwR")
 # install.packages("tsModel")
 # install.packages("cowplot")
+# install.packages("vcd")
 
  
 # install.packages("swirl")
@@ -198,7 +199,7 @@ library(survival)
 library(splines)
 library(parallel)
 library(cowplot)
-
+library(vcd)
 
     
   # }, error = function(e){})
@@ -366,6 +367,26 @@ summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
   
   return(datac)
 }
+
+
+# Input <- 1:40
+# Take_out_vector <- 5
+# From <- 1
+# Knockout <- function(Input, Take_out_vector, From=1){
+#   
+#   
+#   x <- seq(From, max(Input), Take_out_vector*2)
+#   
+#   
+#   for (i in seq(x)){
+#     
+#     x[i] <- x[i]:(x[i]+(Take_out_vector-1))
+#     
+#   }
+#   return(x)
+# }
+# 
+# Knockout(1:40, 5, From=1)
 
 # Proportions_table <- function(Risk_factors_train){
 #   
