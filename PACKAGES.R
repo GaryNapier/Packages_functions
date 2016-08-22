@@ -94,6 +94,7 @@
 # install.packages("tsModel")
 # install.packages("cowplot")
 # install.packages("vcd")
+# install.packages("doParallel")
 
  
 # install.packages("swirl")
@@ -200,6 +201,7 @@ library(parallel)
 library(cowplot)
 library(vcd)
 library(latticeExtra)
+library(doParallel)
 
     
   # }, error = function(e){})
