@@ -199,6 +199,7 @@ library(splines)
 library(parallel)
 library(cowplot)
 library(vcd)
+library(latticeExtra)
 
     
   # }, error = function(e){})
