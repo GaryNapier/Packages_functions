@@ -373,6 +373,15 @@ summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
   return(datac)
 }
 
+# Tests even/odd
+is.even <- function(x) x %% 2 == 0 
+
+# Get effect size for non-parametric t-test (Mann-Whitney)
+Mw_effect <- function(z, n){
+  Effect <- abs(z)/sqrt(n)
+  return(Effect)
+}
+
 
 # Input <- 1:40
 # Take_out_vector <- 5
