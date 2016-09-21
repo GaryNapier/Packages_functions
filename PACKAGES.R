@@ -215,6 +215,52 @@ library(stepPlr)
 # Custom functions
 #------------------------------------------------------------------------------------------------------------------------
 
+# List of functions:
+
+# Split_into - Split vector V into X number of pieces which are a multiple of V
+
+# set_plot - Set dimensions of multiple plot layout
+# reset_plot - reset multiple plot layout to default - i.e. 1x1
+
+# ggplotColours - Colour function - not sure what this does, but results in better colour for GGplot
+
+# lapply_mod - Modified lapply allowing looping by index
+
+# Shapiro_NA - allows NA values when using shapiro.test
+
+# g_legend - Extract legend
+
+# Split_into - For splitting vector into x pieces as a multiple of vector
+
+# Tapas_sgm  - Converts to sigmoid  - Gets the right predictions - adapted from Tapas files 
+
+# Interleave_cols - Interleave two matrix columns assuming matrices are same size
+
+# Eta_sq_nonpara - Effect size for non-parametric ANOVAs
+
+# summarySE - summarises data giving mean, and s.e. - must use melt() to format
+
+# is.even - Tests even/odd
+
+# Mw_effect - Get effect size for non-parametric t-test (Mann-Whitney)
+
+# Add_html - Add html to make tables go horizontally across
+
+# T_frame - Function for putting core t-test output into table (t, df, p, effect size)
+
+# Match_mod - Gets index of columns of x containing any one contained in 'pattern' and cleans up
+
+# ROC_sens_spec - Function to get max ROC, max sens, and max spec for each model 
+
+# Get_CV_results - Function to get mean ROC, sens, spec from CV results
+
+# Conf_matrices - Function to get the confusion matrices for each model
+
+# Get_sig_diffs - Get sig diffs of ANOVA models via TukeyHSD
+
+
+# Functions:
+
 # Split vector V into X number of pieces which are a multiple of V
 Split_into <- function(Vector, Pieces){
   # 'Pieces' must be multiple of Vector
@@ -231,13 +277,13 @@ reset_plot <- function(){
 set_plot <- function(x,y){
   par(mfrow = c(x,y))
 }
-# 
+
 # # Colour function - not sure what this does, but results in better colour for GGplot
 ggplotColours <- function(n = 6, h = c(0, 360) + 15){
   if ((diff(h) %% 360) < 1) h[2] <- h[2] - 360/n
   hcl(h = (seq(h[1], h[2], length = n)), c = 100, l = 65)
 }
-# 
+
 # Modified lapply allowing looping by index
 lapply_mod <- function(X, FUN, ...){
   lapply(seq_along(X), FUN, ...)
@@ -253,18 +299,6 @@ Shapiro_NA <- function(Data){
   }else{
     shapiro.test(Data)$p.value
   }
-}
-
-T_frame <- function(Vector, Binary_var){
-  Out <- tidy(t.test(Vector ~ Binary_var, equal.var=F))
-  Out <- round(c(Out$statistic, Out$parameter, Out$p.value), digits=3)
-  names(Out) <- c("t", "df", "p")
-  return(Out)
-}
-
-Match_mod <- function(Pattern, x){
-  Out <- match(Pattern, x)
-  Out <- Out[!is.na(Out)]
 }
 
 # Extract legend
@@ -288,42 +322,11 @@ Tapas_sgm <- function(x, a){ # NB 'a' is always 1 in original Matlab plotting sc
   return(Predictions)
 }
 
-# Modified lapply allowing looping by index
-lapply_mod <- function(X, FUN, ...){
-  lapply(seq_along(X), FUN, ...)
-}
-
-# Setting and resetting plots
-reset_plot <- function(){
-  par(mfrow = c(1, 1))
-}
-set_plot <- function(x,y){
-  par(mfrow = c(x,y)) # x = rows, y = cols
-}
-
 # Interleave two matrix columns assuming matrices are same size
 Interleave_cols <- function(Matrix_1, Matrix_2){
   Interleave_list <- lapply(seq(ncol(Matrix_1)), function(i) cbind(Matrix_1[,i], Matrix_2[,i]))
   Interleave_matrix <- signif(do.call("cbind", Interleave_list), digits = 3)
   return(Interleave_matrix)
-}
-
-# Colour function
-ggplotColours <- function(n = 6, h = c(0, 360) + 15){
-  if ((diff(h) %% 360) < 1) h[2] <- h[2] - 360/n
-  hcl(h = (seq(h[1], h[2], length = n)), c = 100, l = 65)
-}
-
-All_same <- function(x){
-  length(unique(x)) == 1
-}
-
-Shapiro_NA <- function(Data){
-  if (All_same(Data)){
-    NA
-  }else{
-    shapiro.test(Data)$p.value
-  }
 }
 
 Eta_sq_nonpara <- function(Chi_sq, N){
@@ -381,6 +384,130 @@ Mw_effect <- function(z, n){
   Effect <- abs(z)/sqrt(n)
   return(Effect)
 }
+
+
+# Add html to make tables go horizontally across
+Add_html <- function(Tables){
+  # Input must be list(Tables)
+  Tables <- unlist(Tables)
+  Tables <- cat(cat("<table class='container'><tr>"),
+                for(i in seq(Tables)){
+                  cat("<td>")
+                  cat(Tables[i])
+                  cat("</td>")
+                  cat("<td>")
+                },
+                cat("</tr></table>"))
+  return(cat(Tables))
+}
+
+# Function for putting core t-test output into table (t, df, p, effect size)
+T_frame <- function(Vector, Binary_var){
+  Out <- tidy(t.test(Vector ~ Binary_var, equal.var=F))
+  Effect_size <- cohensD(Vector ~ Binary_var, method="unequal")
+  Out <- round(c(Out$statistic, Out$parameter, Out$p.value, Effect_size), digits=3)
+  names(Out) <- c("t", "df", "p", "Effect size (d)")
+  Out <- t(data.frame(Out))
+  rownames(Out) <- NULL
+  return(Out)
+}
+
+# Gets index of columns of x containing any one contained in 'pattern' and cleans up
+Match_mod <- function(Pattern, x){
+  Out <- match(Pattern, x)
+  Out <- Out[!is.na(Out)]
+  return(Out)
+}
+
+# Function to get max ROC, max sens, and max spec for each model 
+ROC_sens_spec <- function(...){
+  library(htmlTable)
+  Args <- list(...)
+  Model_names <<- as.list(sapply(substitute({...})[-1], deparse))
+  # Function for getting max sensitivity
+  Max_measures <- function(df, colname = "results"){
+    df <- df[[colname]]
+    new_df <- df[c(which.max(df$ROC), which.max(df$Sens), which.max(df$Spec)), ]
+    x <- sapply(new_df, is.numeric)
+    new_df[, x] <- round(new_df[, x], 2)
+    new_df
+  }
+  # Find max Sens for each model
+  Max_out <- lapply(Args, Max_measures)
+  names(Max_out) <- Model_names
+  
+  Max_out <- lapply(seq(Max_out), 
+                    function(i) htmlTable(Max_out[[i]], 
+                                          caption=sprintf("Max ROC, sens, spec %s", Model_names[[i]]),
+                                          align=c("c","|"), align.header =c("c","|"), col.columns = c("none",Blue)))
+  return(Max_out)
+}
+
+# Function to get mean ROC, sens, spec from CV results
+Get_CV_results <- function(...){
+  Args <- list(...)
+  Model_names <<- as.list(sapply(substitute({...})[-1], deparse))
+  
+  Results <- summary(resamples(Args))
+  Results <- data.frame(rbind(Results$statistics$ROC[,"Mean"],
+                              Results$statistics$Sens[,"Mean"], 
+                              Results$statistics$Spec[,"Mean"]))
+  rownames(Results) <- c("ROC", "Sens", "Spec")
+  colnames(Results) <- Model_names
+  
+  Table <- htmlTable(Results, align=c("c","|"), align.header =c("c","|"), col.columns = c("none",Blue), 
+                     caption = "Mean ROC, sens, spec for models")
+  return(Table)
+}
+
+# Function to get the confusion matrices for each model
+Conf_matrices <- function(..., Original_data, Y){
+  Args <- list(...)
+  Model_names <<- as.list(sapply(substitute({...})[-1], deparse))
+  
+  # Get confusion matrices using predict() for each model
+  set.seed(Seed)
+  Predict_out <- lapply(Args, function(x) predict(x, Original_data))
+  Conf_matrices <- lapply(Predict_out, function(x) confusionMatrix(x, Y))
+  names(Conf_matrices) <- Model_names
+  Conf_matrices <- sapply(Conf_matrices, function(x) rbind(x$table))
+  rownames(Conf_matrices) <- Contingencies
+  
+  return(Conf_matrices)
+}
+
+
+
+# Get sig diffs of models 
+Get_sig_diffs <- function(...){
+  Args <- list(...)
+  Model_names <- as.list(sapply(substitute({...})[-1], deparse))
+  names(Args) <- Model_names
+  
+  x <- summary(resamples(Args))
+  
+  Sig_diffs <- list(melt(x$values[,seq(1, ncol(x$values), 3)]), 
+                    melt(x$values[,seq(2, ncol(x$values), 3)]),
+                    melt(x$values[,seq(3, ncol(x$values), 3)]))
+  
+  Sig_diffs <- lapply(Sig_diffs, function(x) 
+    TukeyHSD(aov(value~variable, data=x))$variable[, c(1, 4)])
+  
+  Sig_diffs <- lapply(seq(Sig_diffs), function(i){
+    tryCatch({
+      txtRound(Sig_diffs[[i]], 3)
+    }, error = function(e) {Sig_diffs[[i]]})
+  })
+  
+  Tables <- lapply(seq(Sig_diffs), function(i) htmlTable(Sig_diffs[[i]], 
+                                                         align=c("c","|"), 
+                                                         align.header =c("c","|"), 
+                                                         col.columns = c("none",Blue), 
+                                                         caption = sprintf("Significant differences %s", Measures[i])))
+  
+  Tables <- Add_html(Tables)
+}
+
 
 
 # Input <- 1:40
