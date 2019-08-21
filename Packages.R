@@ -103,6 +103,7 @@
 # install.packages("ggraph")
 # install.packages("circlize")
 # install.packages("dynamicTreeCut")
+# devtools::install_github("emvolz-phylodynamics/treestructure")
 
 # LIBRARY
 
@@ -132,6 +133,8 @@ library(textclean)
 library(ggplot2)
 library(gridExtra)
 library(amap)
+library(devtools)
+library(treestructure)
 
 
 # Other:
