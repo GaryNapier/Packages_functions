@@ -134,6 +134,7 @@ library(amap)
 library(devtools)
 library(treestructure)
 library(grid)
+library(fastbaps)
 
 
 # Other:
