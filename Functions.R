@@ -361,3 +361,153 @@ Sub_group <- function(x, Group, Retain){
                                      "retain"]) , ]
   }))
 }
+
+hs <- function(x, ...){
+  # Print both head() and str() so don't have to print separately
+  print(head(x, ...))
+  print("---")
+  str(x, ...)
+}
+
+round_if <- function(x, round_place = 3){
+  # For a numeric column of a dataframe, display as a regular decimal to 3 places if > 0.01
+  # If less then display as scientific e.g. 1e-03
+  # n.b. converts whole vector to string
+  # > x <- data.frame(ID = LETTERS[1:5], a = c(0.1, 0.01, 0.001, 0.0001, 0.00001), b = 1:5)
+  # > round_if(x$a)
+  # [1] "0.1"   "0.01"  "1e-03" "1e-04" "1e-05"
+  # > x$a <- round_if(x$a)
+  # > x
+  #   ID     a b
+  # 1  A   0.1 1
+  # 2  B  0.01 2
+  # 3  C 1e-03 3
+  # 4  D 1e-04 4
+  # 5  E 1e-05 5
+  x_new <- vector()
+  for(i in seq(x)){
+    num <- as.numeric(x[i])
+    if(is.na(num)){
+      x_new[i] <- x[i]
+    }else if(num < 0.01){
+      x_new[i] <- scales::scientific(num)
+    }else{
+      x_new[i] <- round(num, round_place)
+    }
+  }
+  x_new
+}
+
+num_cols <- function(x){
+  # Returns only the numeric columns of a dataframe
+  x[, sapply(x, is.numeric)]
+}
+
+group_sum <- function(df, col, r_names){
+  # Sum all the numeric columns by the row values of another (string, probably 'ID') column
+  # Creates a new concatenated value for the ID column
+  # Needs the num_cols() function above
+  # > x <- data.frame(ID = LETTERS[1:10], x = 1:10, y = 21:30)
+  # > group_sum(x, "ID", c("A", "B", "C"))
+  #        ID x  y
+  # 1 A, B, C 6 66
+  col <- as.character(col)
+  x <- df[df[, col] %in% r_names, ]
+  num_df <- data.frame(as.list(colSums(num_cols(x))))
+  cat_df <- setNames(data.frame(paste0(x[, col], collapse = ", ")), col) 
+  cbind(cat_df, num_df)
+}
+
+fmt <- function(x, ...){
+  # > fmt(1000)
+  # [1] "1,000"
+  # > fmt(10000)
+  # [1] "10,000"
+  # Add comma to numbers. Converts to string.
+  format(x, big.mark=",",scientific=FALSE, ...)
+}
+
+len_str <- function(string){
+  # Get length of string or vector of strings
+  # > len_str("bananas")
+  # [1] 7
+  # > len_str(c("bananas", "apples", "grapes"))
+  # [1] 19
+  length(unlist(strsplit(string, split = "")))
+}
+
+to_table <- function(x, pc_dir = "row"){
+  # Add percentages and totals to tables. 
+  # Requires dplyr and janitor packages
+  # pc_dir = the direction to use for calculating percentages. One of "row", "col", or "all".
+  # x <- data.frame(ID = LETTERS[1:10], x = 1:10, y = 21:30)
+  # > to_table(x, pc_dir = "row")
+  # ID           x            y         Total
+  # A  1  (4.55%)  21 (95.45%)  22 (100.00%)
+  # B  2  (8.33%)  22 (91.67%)  24 (100.00%)
+  # C  3 (11.54%)  23 (88.46%)  26 (100.00%)
+  # D  4 (14.29%)  24 (85.71%)  28 (100.00%)
+  # E  5 (16.67%)  25 (83.33%)  30 (100.00%)
+  # F  6 (18.75%)  26 (81.25%)  32 (100.00%)
+  # G  7 (20.59%)  27 (79.41%)  34 (100.00%)
+  # H  8 (22.22%)  28 (77.78%)  36 (100.00%)
+  # I  9 (23.68%)  29 (76.32%)  38 (100.00%)
+  # J 10 (25.00%)  30 (75.00%)  40 (100.00%)
+  # Total 55 (17.74%) 255 (82.26%) 310 (100.00%)
+  
+  
+  if(!require(dplyr)){
+    install.packages("dplyr")
+  }
+  if(!require(janitor)){
+    install.packages("janitor")
+  }
+  x <- x %>% janitor::adorn_totals(c("row", "col")) %>%
+    janitor::adorn_percentages(c(pc_dir)) %>%
+    janitor::adorn_pct_formatting(digits = 2)
+  formatted_ns <- attr(x, "core") %>% # extract the tabyl's underlying Ns
+    janitor::adorn_totals(c("row", "col")) %>% # to match the data.frame we're appending to
+    dplyr::mutate_if(is.numeric, format, big.mark = ",")
+  x %>% adorn_ns(position = "front", ns = formatted_ns)
+}
+
+log10_ceiling <- function(x) {
+  # Round up to nearest 10, 100, 1000 etc depending on size of number
+  # > log10_ceiling(10)
+  # [1] 10
+  # > log10_ceiling(11)
+  # [1] 100
+  # > log10_ceiling(99)
+  # [1] 100
+  # > log10_ceiling(101)
+  # [1] 1000
+  # > log10_ceiling(9999)
+  # [1] 10000
+  # > log10_ceiling(10001)
+  # [1] 1e+05
+  10^(ceiling(log10(x)))
+}
+
+tab2df <- function(tab){
+  # Convert table object to dataframe
+  df <- data.frame(x = matrix(tab, ncol = length(tab)))
+  names(df) <- names(tab)
+  df
+}
+
+print_vect <- function(x){
+  # Print vector with commas and spaces separating
+  # x <- 1:10
+  # > print_vect(x)
+  # [1] "1, 2, 3, 4, 5, 6, 7, 8, 9, 10"
+  # > x <- c("bananas", "pears", "apples")
+  # > print_vect(x)
+  # [1] "bananas, pears, apples"
+  gsub(".{1}$", "", paste0(x, sep = ",", collapse = " "))
+}
+
+drop_cols <- function(x, cnames){
+  # Drop columns by column names
+  x[!(names(x) %in% cnames)]
+}
+
