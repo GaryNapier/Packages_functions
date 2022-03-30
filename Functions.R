@@ -511,3 +511,35 @@ drop_cols <- function(x, cnames){
   x[!(names(x) %in% cnames)]
 }
 
+# Get T/F for which columns are numeric instead of using sapply
+# > head(df)
+# gene1       pos1 gene2          pos2        chisq          lrt       lor        se        waldp
+# katG p.Ser315Thr  ahpC      c.-48G>A 6.365049e-03 6.838877e-03 0.6484617 0.2306100 4.924359e-03
+# katG p.Ser315Thr  ahpC      c.-51G>A 1.336244e-03 1.772518e-03 1.0247058 0.3149814 1.141025e-03
+# katG p.Ser315Thr  ahpC c.-47_-46insT 1.726763e-22 2.161040e-18 2.7396624 0.3700432 1.325123e-13
+# > is_numeric(df)
+# gene1  pos1 gene2  pos2 chisq   lrt   lor    se waldp 
+# FALSE FALSE FALSE FALSE  TRUE  TRUE  TRUE  TRUE  TRUE
+# df[, is_numeric(df)] <- <code>
+is_numeric <- function(df){
+  sapply(df, is.numeric)
+}
+
+# Round columns, keeping scientific notation if already in scientific notation(round_if function), and convert back to numeric
+# > head(df)
+# gene1       pos1 gene2          pos2        chisq          lrt       lor        se        waldp
+# katG p.Ser315Thr  ahpC      c.-48G>A 6.365049e-03 6.838877e-03 0.6484617 0.2306100 4.924359e-03
+# katG p.Ser315Thr  ahpC      c.-51G>A 1.336244e-03 1.772518e-03 1.0247058 0.3149814 1.141025e-03
+# katG p.Ser315Thr  ahpC c.-47_-46insT 1.726763e-22 2.161040e-18 2.7396624 0.3700432 1.325123e-13
+# df <- round_cols(df)
+# > head(katg)
+# gene1       pos1 gene2          pos2    chisq      lrt   lor    se    waldp
+# katG p.Ser315Thr  ahpC      c.-48G>A 6.37e-03 6.84e-03 0.648 0.231 4.92e-03
+# katG p.Ser315Thr  ahpC      c.-51G>A 1.34e-03 1.77e-03 1.025 0.315 1.14e-03
+# katG p.Ser315Thr  ahpC c.-47_-46insT 1.73e-22 2.16e-18 2.740 0.370 1.33e-13
+round_cols <- function(df){
+  df[, is_numeric(df)] <- apply(apply(num_cols(df), 2, round_if), 2, as.numeric)
+  df
+}
+
+
