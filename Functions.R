@@ -542,4 +542,18 @@ round_cols <- function(df){
   df
 }
 
+# Sort a whole dataframe with each column decreasing by default
+# df <- data.frame(x = c(2, 2, 3, 3, 1, 1), y = c('f', 'c', 'b', 'a', 'z', 'w'))
+# odr(df)
+# x y
+# 1 w
+# 1 z
+# 2 c
+# 2 f
+# 3 a
+# 3 b
+odr <- function(x, decreasing = F){
+  x[do.call(order, c(x, list(decreasing=decreasing))),]
+}
+
 
