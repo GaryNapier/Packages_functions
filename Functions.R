@@ -557,3 +557,91 @@ odr <- function(x, decreasing = F){
 }
 
 
+uniq_col <- function(x, split = "; "){
+  unique(unlist(strsplit(x, split)))
+}
+
+col_pc <- function(df, col){
+  round((df[, col] / sum(df[, col]))*100, 3)
+}
+
+len_uniq <- function(x){
+  length(unique(x))
+}
+
+rbind_force <- function(df1, df2){
+  rbind(df1, setNames(df2, names(df1)))
+}
+
+# Make quick pivot table summarising total unique values by column
+# my_formula arg must be call to the formula() function: formula(<col> ~ 'n')
+# Result:
+#             PRM            n
+#  katG-c.2223A>G  3   (4.05%)
+# katG-p.Arg484His  5   (6.76%)
+# ...
+# katG-p.Tyr413Cys  8  (10.81%)
+#           Total 74 (100.00%)
+pivot <- function(x, my_formula, value_var = "wgs_id"){
+  drop_cols(to_table(reshape2::dcast(x, my_formula, value.var = value_var, fun.aggregate = len_uniq),
+                     pc_dir = 'col'), 
+            'Total')
+}
+
+duped <- function(x, col){
+  dups <- x[duplicated(x[col]), col]
+  x[x[, col] %in% dups, ]
+}
+
+# Swap first and second parts of string, splitting on a charachter (or substring)
+# e.g. 
+# x <- "katG-p.Ile335Val; katG-p.Ser315Thr"
+# swap_str(x, "; ")
+# "katG-p.Ser315Thr; katG-p.Ile335Val"
+swap_str <- function(x, split_chr = "; "){
+  paste0(unlist(strsplit(x, split_chr))[c(2, 1)], collapse = split_chr)
+}
+
+
+# Print each element of vector vertically instead of across the screen
+# e.g. 
+# > x <- c("a", "b", "c")
+# > x
+# [1] "a" "b" "c"
+# > print_vert(x)
+# a
+# b
+# c
+print_vert <- function(x){
+  cat(paste0(x, '\n'))
+}
+
+# Remove change from second gene-change pair
+# e.g.
+# x <- "katG-p.Ser315Thr; fabG1-c.-15C>T"
+# > drop_change(x, "-")
+# [1] "katG-p.Ser315Thr; fabG1"
+drop_change <- function(string, split_on = "-"){
+  unlist(lapply(strsplit(string, split_on), function(x){paste0(x[c(1, 2)], collapse = split_on)}))
+}
+
+clean_binary_table <- function(x){
+  x <- data.frame(apply(x, 2, function(x){gsub("\\[\\]", NA, as.character(x))}))
+  x <- data.frame(apply(x, 2, function(x){ gsub("\\[||\\]", "", as.character(x)) }))
+  x <- data.frame(apply(x, 2, function(x){ gsub("\\), \\(", "; ", as.character(x)) }))
+  x <- data.frame(apply(x, 2, function(x){ gsub("\\', \\'", "-", as.character(x)) }))
+  x <- data.frame(apply(x, 2, function(x){ gsub("\\(||\\)", "", as.character(x)) }))
+  x <- data.frame(apply(x, 2, function(x){ gsub("\\'", "", as.character(x)) }))
+  x
+}
+
+sort_pos <- function(x, col){
+  
+  x$pos <- as.numeric(stringr::str_extract(x[, col], "[0-9]+"))
+  x <- x[order(x$pos), ]
+  drop_cols(x, 'pos')
+  
+}
+
+
+
