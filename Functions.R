@@ -643,5 +643,238 @@ sort_pos <- function(x, col){
   
 }
 
+uniq_col <- function(x, split = "; "){
+  unique(unlist(strsplit(x, split)))
+}
+
+col_pc <- function(df, col){
+  round((df[, col] / sum(df[, col]))*100, 3)
+}
+
+len_uniq <- function(x){
+  length(unique(x))
+}
+
+rbind_force <- function(df1, df2){
+  rbind(df1, setNames(df2, names(df1)))
+}
+
+# Make quick pivot table summarising total unique values by column
+# my_formula arg must be call to the formula() function: formula(<col> ~ 'n')
+# Result:
+#             PRM            n
+#  katG-c.2223A>G  3   (4.05%)
+# katG-p.Arg484His  5   (6.76%)
+# ...
+# katG-p.Tyr413Cys  8  (10.81%)
+#           Total 74 (100.00%)
+pivot <- function(x, my_formula, value_var = "wgs_id"){
+  drop_cols(to_table(reshape2::dcast(x, my_formula, value.var = value_var, fun.aggregate = len_uniq),
+                     pc_dir = 'col'), 
+            'Total')
+}
+
+pivot_num <- function(x, my_formula,value_var = "wgs_id", ...){
+  reshape2::dcast(x, my_formula, value.var = value_var, fun.aggregate = len_uniq, ...)
+}
+
+split_pivot <- function(df, my_formula, leave_col, value_var = "wgs_id", split_on_col = "Drug"){
+  
+  to_table_split_pivot <- function(x, col){
+    x[[col]] <- as.character(x[[col]])
+    x <- drop_cols(to_table(x, "col"), "Total")
+    x[[col]] <- gsub("\\s*\\([^\\)]+\\)", "", x[[col]])
+    x
+  }
+  
+  df_pivot <- reshape2::dcast(df, my_formula, value.var = 'wgs_id', fun.aggregate = len_uniq)
+  df_split <- split(df_pivot, df_pivot[, split_on_col])
+  
+  do.call('rbind', lapply(df_split, to_table_split_pivot, leave_col))
+  
+}
+
+duped <- function(x, col){
+  dups <- x[duplicated(x[col]), col]
+  x[x[, col] %in% dups, ]
+}
+
+# Swap first and second parts of string, splitting on a charachter (or substring)
+# e.g. 
+# x <- "katG-p.Ile335Val; katG-p.Ser315Thr"
+# swap_str(x, "; ")
+# "katG-p.Ser315Thr; katG-p.Ile335Val"
+swap_str <- function(x, split_chr = "; "){
+  paste0(unlist(strsplit(x, split_chr))[c(2, 1)], collapse = split_chr)
+}
+
+
+# Print each element of vector vertically instead of across the screen
+# e.g. 
+# > x <- c("a", "b", "c")
+# > x
+# [1] "a" "b" "c"
+# > print_vert(x)
+# a
+# b
+# c
+print_vert <- function(x){
+  cat(paste0(x, '\n'))
+}
+
+# Remove change from second gene-change pair
+# e.g.
+# x <- "katG-p.Ser315Thr; fabG1-c.-15C>T"
+# > drop_change(x, "-")
+# [1] "katG-p.Ser315Thr; fabG1"
+drop_change <- function(string, split_on = "-"){
+  unlist(lapply(strsplit(string, split_on), function(x){paste0(x[c(1, 2)], collapse = split_on)}))
+}
+
+clean_binary_table <- function(x){
+  x <- data.frame(apply(x, 2, function(x){gsub("\\[\\]", NA, as.character(x))}))
+  x <- data.frame(apply(x, 2, function(x){ gsub("\\[||\\]", "", as.character(x)) }))
+  x <- data.frame(apply(x, 2, function(x){ gsub("\\), \\(", "; ", as.character(x)) }))
+  x <- data.frame(apply(x, 2, function(x){ gsub("\\', \\'", "-", as.character(x)) }))
+  x <- data.frame(apply(x, 2, function(x){ gsub("\\(||\\)", "", as.character(x)) }))
+  x <- data.frame(apply(x, 2, function(x){ gsub("\\'", "", as.character(x)) }))
+  x
+}
+
+sort_pos <- function(x, col){
+  x$pos <- as.numeric(stringr::str_extract(x[, col], "[0-9]+"))
+  x <- x[order(x$pos), ]
+  drop_cols(x, 'pos')
+}
+
+lapply_nms <- function(x, fun, nms){
+  res <- lapply(x, fun)
+  names(res) <- nms
+  res
+}
+
+drug_col_front <- function(df_list){
+  lapply(df_list, function(x){ select(x, Drug, everything()) })
+}
+
+add_drug_col <- function(df_list, drugs){
+  drug_col_front(lapply_mod(df_list, function(i){df_list[[i]]$Drug <- rep(drugs[i], nrow(df_list[[i]])); df_list[[i]]}))
+}
+
+find_pos <- function(x){
+  sub("\\-", "", gsub("[^0-9\\-]+", "", x))
+}
+
+fmt_pc <- function(x, rnd = 2, ...){
+  paste0(fmt(round(x*100, rnd), ...), "%")
+}
+
+trimws_df <- function(x){
+  data.frame(sapply(x, trimws))
+}
+
+tonum <- function(x){
+  as.numeric(gsub(",", "", strsplit(x, " ")[[1]][1]))
+}
+
+uniq_vars <- function(x){
+  unique(unlist(strsplit(x, "; ")))
+}
+
+rm_null <- function(x){
+  x[!sapply(x,is.null)] 
+}
+
+rm_norow <- function(x){
+  x[sapply(x, nrow) > 0]
+}
+
+rm_na <- function(x){
+  x[!is.na(x)]
+}
+
+pivot_numeric <- function(x, my_formula, value_var = "wgs_id"){
+  reshape2::dcast(x, my_formula, value.var = value_var, fun.aggregate = len_uniq)
+}
+
+print_chisq <- function(chisq_result, scientific = T, rnd = 3){
+  paste0("X-sq = ", round(chisq_result$statistic, rnd), 
+         "; df = ", round(chisq_result$parameter, rnd), 
+         "; p = ", format(chisq_result$p.value, scientific = scientific))
+}
+
+clean_del_ins_dup <- function(x){
+  gsub("(del|ins|dup).*", "\\1", x)
+}
+
+drop_col_name <- function(x, name){
+  # Return col names except named col names
+  names(x)[!(names(x) %in% name)]
+}
+
+rbind_mod <- function(df1, df2, names){
+  rbind(setNames(df1, names), setNames(df2, names))
+}
+
+
+split_df_on_haplotype <- function(df, col){
+  # Duplicate sample row if other_vars has more than one var (i.e. on the "; " character/string)
+  data.frame(df %>% mutate(col = strsplit(as.character(col), "; ")) %>% unnest(col))
+}
+
+strsplit_mod <- function(x,
+                         split,
+                         type = "remove",
+                         perl = FALSE,
+                         ...) {
+  if (type == "remove") {
+    # use base::strsplit
+    out <- base::strsplit(x = x, split = split, perl = perl, ...)
+  } else if (type == "before") {
+    # split before the delimiter and keep it
+    out <- base::strsplit(x = x,
+                          split = paste0("(?<=.)(?=", split, ")"),
+                          perl = TRUE,
+                          ...)
+  } else if (type == "after") {
+    # split after the delimiter and keep it
+    out <- base::strsplit(x = x,
+                          split = paste0("(?<=", split, ")"),
+                          perl = TRUE,
+                          ...)
+  } else {
+    # wrong type input
+    stop("type must be remove, after or before!")
+  }
+  return(out)
+}
+
+get_gene <- function(x, split_on = "-"){
+  unlist(lapply(strsplit(x, split_on), function(x){x[1]}))
+}
+
+drop_gene <- function(x, split_on = "-"){
+  unlist(lapply(strsplit_mod(x, split_on, "before"), function(x){
+    if(length(x) < 3){
+      x <- paste0(x[2:length(x)], collapse = "")
+      x <- gsub("-p.", "", x)
+      gsub("-c.", "", x)
+    }else{
+      x <- paste0(x[3:length(x)], collapse = "")
+      x <- gsub("-p.", "", x)
+      gsub("-c.", "", x)
+    }
+  }))
+}
+
+try_read_csv <- function(x){
+  tryCatch({read.csv(x)}, error = function(e){})
+}
+
+add_pc_col <- function(x, col, divide_by, rnd = 2){
+  x$pc <- fmt_pc(x[, col]/divide_by, rnd)
+  x[col] <- fmt(x[, col])
+  x
+}
 
 
