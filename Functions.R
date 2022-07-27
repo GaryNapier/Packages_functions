@@ -877,4 +877,52 @@ add_pc_col <- function(x, col, divide_by, rnd = 2){
   x
 }
 
+expand_hierarchy_fill <- function(df, group_by_col_name, hierarchy_to_expand_col_name){
+  # Takes df like this:
+  #   ID      Group
+  # 1 samp_1  4.2.1.1
+  # 2 samp_2  1.2.1.2.1
+  # 3 samp_3  4
+  
+  # And makes this:
+  #   ID    lin_level_1 lin_level_2 lin_level_3 lin_level_4 lin_level_5   max_lin
+  # 1 samp_1          4         4.2       4.2.1     4.2.1.1     4.2.1.1   4.2.1.1
+  # 2 samp_2          1         1.2       1.2.1     1.2.1.2   1.2.1.2.1 1.2.1.2.1
+  # 3 samp_3          4           4           4           4           4         4
+  
+  # To fill hierarchy with NAs use function expand_hierarchy()
+  #   ID    lin_level_1 lin_level_2 lin_level_3 lin_level_4 lin_level_5   max_lin
+  # 1 samp_1          4         4.2       4.2.1     4.2.1.1        <NA>   4.2.1.1
+  # 2 samp_2          1         1.2       1.2.1     1.2.1.2   1.2.1.2.1 1.2.1.2.1
+  # 3 samp_3          4        <NA>        <NA>        <NA>        <NA>      <NA>
+  
+  split_lins <- stringr::str_split(df[[hierarchy_to_expand_col_name]], "\\.")
+  max_lin_len <- max(sapply(split_lins, length))
+  mat <- matrix(nrow = length(df[[group_by_col_name]]), ncol = max_lin_len+1)
+  mat[, 1] <- df[[group_by_col_name]]
+  
+  for(i in 1:nrow(mat)){
+    for(lin_level in 1:max_lin_len){
+      
+      len_lin <- length(split_lins[[i]])
+      
+      if(lin_level > len_lin){
+        # mat[i, lin_level+1] <- NA
+        mat[i, lin_level+1] <- mat[i, lin_level]
+      }else{
+        mat[i, lin_level+1] <- paste0(split_lins[[i]][1:lin_level], collapse = ".")
+      }
+    }
+  }
+  
+  max_lin <- vector()
+  for(i in seq(nrow(mat))){
+    max_lin[i] <- mat[i, which.max(sapply(mat[i, -1], len_str))+1]
+  }
+  mat <- data.frame(cbind(mat, max_lin), stringsAsFactors = F)
+  names(mat) <- c("id", paste0("lin_level_", 1:(ncol(mat)-2) ), "max_lin")
+  return(mat)
+}
+
+
 
