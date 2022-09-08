@@ -924,5 +924,19 @@ expand_hierarchy_fill <- function(df, group_by_col_name, hierarchy_to_expand_col
   return(mat)
 }
 
+dark_to_light <- function(lin_names, first_col){
+  if(length(lin_names) == 1){
+    names(first_col) <- lin_names
+    return(first_col)
+  }else{
+    lighten_to_col <- lighten(first_col, 1-(1/(length(lin_names))))
+    fc <- colorRampPalette(c(first_col, lighten_to_col))
+    lin_all_cols <- fc(length(lin_names))
+    scales::show_col(lin_all_cols)
+    names(lin_all_cols) <- lin_names
+    return(lin_all_cols)
+  }
+}
+
 
 
