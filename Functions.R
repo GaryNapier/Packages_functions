@@ -938,5 +938,63 @@ dark_to_light <- function(lin_names, first_col){
   }
 }
 
+row_probs <- function(x){
+  # Dataframe:
+  # fruit   X1 X2 X3
+  # mangoes 90 10 20
+  # bananas 10 90 80
+  # Get the row-wise proportions for each number:
+  # fruit   X1     X2     X3
+  # mangoes 0.7500 0.0833 0.167
+  # bananas 0.0556 0.5000 0.444
+  # i.e. mangoes-X1 = 90/(90+10+20) = 0.75
+  
+  # Strip off the non-numeric col(s)
+  x_non_num <- non_num_cols(x)
+  # Strip off numeric cols for calculation 
+  x <- num_cols(x)
+  # Pre-define an empty matrix
+  mat <- matrix(nrow = nrow(x), ncol = ncol(x))
+  # Loop over rows 
+  for(row in seq(nrow(x))){
+    # Loop over cols in row
+    for(col in seq(ncol(x[row, ]))){
+      # Divide the number by the total in the row
+      mat[row, col] <- x[row, col]/sum(x[row, ])
+    }
+  }
+  # Put table back together
+  cbind(x_non_num, setNames(data.frame(mat), names(x)))
+}
+
+col_probs <- function(x){
+  # Dataframe:
+  # fruit   X1 X2 X3
+  # mangoes 90 10 20
+  # bananas 10 90 80
+  # Get the col-wise proportions for each number:
+  # col_probs(x)
+  # fruit   L1  L2  L3
+  # mangoes 0.9 0.1 0.2
+  # bananas 0.1 0.9 0.8
+  # i.e. mangoes-X1 = 90/(90+10) = 0.9
+  
+  # Strip off the non-numeric col(s)
+  x_non_num <- non_num_cols(x)
+  # Strip off numeric cols for calculation 
+  x <- num_cols(x)
+  # Pre-define an empty matrix
+  mat <- matrix(nrow = nrow(x), ncol = ncol(x))
+  # Loop over rows 
+  for(row in seq(nrow(x))){
+    # Loop over cols in row
+    for(col in seq(ncol(x[row, ]))){
+      # Divide the number by the total in the row
+      mat[row, col] <- x[row, col]/sum(x[ ,col])
+    }
+  }
+  # Put table back together
+  cbind(x_non_num, setNames(data.frame(mat), names(x)))
+}
 
 
