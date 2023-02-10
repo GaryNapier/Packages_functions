@@ -877,6 +877,62 @@ add_pc_col <- function(x, col, divide_by, rnd = 2){
   x
 }
 
+dark_to_light <- function(lin_names, first_col){
+  if(length(lin_names) == 1){
+    names(first_col) <- lin_names
+    return(first_col)
+  }else{
+    lighten_to_col <- lighten(first_col, 1-(1/(length(lin_names))))
+    fc <- colorRampPalette(c(first_col, lighten_to_col))
+    lin_all_cols <- fc(length(lin_names))
+    scales::show_col(lin_all_cols)
+    names(lin_all_cols) <- lin_names
+    return(lin_all_cols)
+  }
+}
+
+non_num_cols <- function(x){
+  # Returns only the non-numeric columns of a dataframe
+  x[!(sapply(x, is.numeric))]
+}
+
+expand_hierarchy <- function(df, group_by_col_name, hierarchy_to_expand_col_name){
+  # Takes df like this:
+  #   ID      Group
+  # 1 samp_1  4.2.1.1
+  # 2 samp_2  1.2.1.2.1
+  
+  # And makes this:
+  #   ID    lin_level_1 lin_level_2 lin_level_3 lin_level_4 lin_level_5   max_lin
+  # 1 samp_1          4         4.2       4.2.1     4.2.1.1        <NA>   4.2.1.1
+  # 2 samp_2          1         1.2       1.2.1     1.2.1.2   1.2.1.2.1 1.2.1.2.1
+  
+  split_lins <- stringr::str_split(df[[hierarchy_to_expand_col_name]], "\\.")
+  max_lin_len <- max(sapply(split_lins, length))
+  mat <- matrix(nrow = length(df[[group_by_col_name]]), ncol = max_lin_len+1)
+  mat[, 1] <- df[[group_by_col_name]]
+  for(i in 1:nrow(mat)){
+    for(lin_level in 1:max_lin_len){
+      
+      len_lin <- length(split_lins[[i]])
+      
+      if(lin_level > len_lin){
+        mat[i, lin_level+1] <- NA
+      }else{
+        mat[i, lin_level+1] <- paste0(split_lins[[i]][1:lin_level], collapse = ".")
+      }
+    }
+  }
+  
+  max_lin <- vector()
+  for(i in seq(nrow(mat))){
+    max_lin[i] <- mat[i, which.max(sapply(mat[i, -1], len_str))+1]
+  }
+  mat <- data.frame(cbind(mat, max_lin), stringsAsFactors = F)
+  names(mat) <- c("id", paste0("lin_level_", 1:(ncol(mat)-2) ), "max_lin")
+  return(mat)
+}
+
 expand_hierarchy_fill <- function(df, group_by_col_name, hierarchy_to_expand_col_name){
   # Takes df like this:
   #   ID      Group
@@ -924,18 +980,17 @@ expand_hierarchy_fill <- function(df, group_by_col_name, hierarchy_to_expand_col
   return(mat)
 }
 
-dark_to_light <- function(lin_names, first_col){
-  if(length(lin_names) == 1){
-    names(first_col) <- lin_names
-    return(first_col)
-  }else{
-    lighten_to_col <- lighten(first_col, 1-(1/(length(lin_names))))
-    fc <- colorRampPalette(c(first_col, lighten_to_col))
-    lin_all_cols <- fc(length(lin_names))
-    scales::show_col(lin_all_cols)
-    names(lin_all_cols) <- lin_names
-    return(lin_all_cols)
-  }
+top_spol_freq <- function(x, col){
+  x %>% 
+    group_by_(.dots = lazyeval::lazy(col)) %>% 
+    dplyr::count(.dots = lazyeval::lazy(col), spoligotype) %>% 
+    dplyr::arrange(desc(n), .by_group = TRUE) %>%
+    dplyr::top_n(10, n) %>% 
+    data.frame()
+}
+
+tab2df <- function(df){
+  as.data.frame.matrix(table(df))
 }
 
 row_probs <- function(x){
@@ -996,5 +1051,34 @@ col_probs <- function(x){
   # Put table back together
   cbind(x_non_num, setNames(data.frame(mat), names(x)))
 }
+
+sort_df_by_col_name <- function(df, col, decreasing = T){
+  df[order(df[, col],  decreasing = decreasing),]
+}
+
+rm_dup_group <- function(df, col){
+  # If rows of groups are repeated in a col, replace repeats with blank ("")
+  # For final display of tables
+  # e.g. 
+  # in
+  # lineage value
+  # L1      10
+  # L1      20
+  # L1      25
+  # L2      100
+  # L2      3
+  # L2      21
+  # out
+  # lineage value
+  # L1      10
+  #         20
+  #         25
+  # L2      100
+  #         3
+  #         21
+  df[which(duplicated(df[col])), col] <- ""
+  df
+}
+
 
 
